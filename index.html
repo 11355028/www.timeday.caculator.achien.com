@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>阿簽牌線上計算小工具</title>
+    <title>阿簽計算工具箱</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.js"></script>
     <style>
         :root {
@@ -11,23 +11,17 @@
             --container-bg: #ffffff;
             --text-color: #2c3e50;
             --accent-color: #3498db;
-            --shadow: 0 4px 20px rgba(0,0,0,0.1);
             --input-border: #ccd1d9;
+            --shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-color: #121212;
-                --container-bg: #1e1e1e;
-                --text-color: #e0e0e0;
-                --accent-color: #5dade2;
-                --shadow: 0 4px 25px rgba(0,0,0,0.5);
-                --input-border: #333;
-            }
+        body.dark-theme {
+            --bg-color: #121212;
+            --container-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #5dade2;
+            --input-border: #333;
         }
-
-        body.light-theme { --bg-color: #f5f7fa; --container-bg: #ffffff; --text-color: #2c3e50; }
-        body.dark-theme { --bg-color: #121212; --container-bg: #1e1e1e; --text-color: #e0e0e0; }
 
         body {
             font-family: "PingFang TC", sans-serif;
@@ -41,7 +35,6 @@
             transition: 0.3s;
         }
 
-        /* 導覽列 */
         .nav-bar {
             width: 100%;
             overflow-x: auto;
@@ -51,7 +44,7 @@
             box-shadow: var(--shadow);
             position: sticky;
             top: 0;
-            z-index: 1000;
+            z-index: 999;
         }
 
         .nav-item {
@@ -61,7 +54,6 @@
             cursor: pointer;
             border-radius: 25px;
             font-weight: bold;
-            transition: 0.2s;
         }
 
         .nav-item.active { background: var(--accent-color); color: white; }
@@ -75,110 +67,125 @@
             border-radius: 20px;
             box-shadow: var(--shadow);
             display: none;
+            box-sizing: border-box;
         }
 
         .container.active { display: block; }
 
-        /* 首頁巨大時鐘 */
-        #home { text-align: center; padding: 100px 20px; }
-        .huge-clock { font-size: 8rem; font-weight: 900; font-family: 'Courier New', monospace; color: var(--accent-color); text-shadow: 0 0 30px rgba(52, 152, 219, 0.4); }
-        .huge-date { font-size: 2rem; opacity: 0.8; margin-top: 20px; }
-
-        /* UI 元件 */
-        h2 { border-left: 6px solid var(--accent-color); padding-left: 15px; margin-bottom: 20px; }
-        input, select, button, textarea {
-            width: 100%; padding: 12px; margin: 8px 0; border: 1px solid var(--input-border);
-            border-radius: 10px; background: var(--container-bg); color: var(--text-color); font-size: 1rem;
-        }
-        button { background: var(--accent-color); color: white; border: none; font-weight: bold; cursor: pointer; }
-        .result-box { background: rgba(52, 152, 219, 0.1); padding: 15px; border-radius: 10px; margin-top: 10px; font-weight: bold; white-space: pre-wrap; }
+        /* 首頁與時鐘 */
+        #home { text-align: center; padding: 40px 20px; }
+        .huge-clock { font-size: 5rem; font-weight: 900; font-family: monospace; color: var(--accent-color); margin: 10px 0; }
         
-        canvas { background: white; border-radius: 10px; width: 100%; height: 300px; margin-top: 10px; }
+        #newYearHome {
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border-radius: 15px;
+            display: none;
+        }
 
-        #adminBtn { position: fixed; bottom: 10px; right: 10px; opacity: 0.2; width: auto; font-size: 10px; }
+        /* 籃球專用計分板樣式 */
+        .game-timer-box { text-align: center; background: #000; color: #ff9f43; padding: 10px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #333; }
+        .game-time { font-family: 'Courier New', monospace; font-size: 3rem; font-weight: bold; }
+        
+        .score-board { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; text-align: center; gap: 10px; }
+        .team-name { font-weight: bold; font-size: 1.2rem; margin-bottom: 5px; }
+        .score-val { font-size: 4rem; font-weight: 900; color: var(--accent-color); line-height: 1; }
+        .foul-box { margin-top: 10px; color: #e74c3c; font-weight: bold; font-size: 0.9rem; }
+        
+        .period-box { font-size: 1.2rem; font-weight: bold; background: var(--accent-color); color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; }
+
+        .score-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 10px; }
+        .score-btn-small { width: 42px; height: 42px; border-radius: 50%; font-size: 0.8rem; padding: 0; background: var(--accent-color); color: white; border: none; cursor: pointer; }
+        .foul-btn { background: #e67e22; margin-top: 5px; width: auto; padding: 5px 10px; border-radius: 5px; font-size: 0.7rem; }
+
+        input, select, button {
+            width: 100%; padding: 12px; margin: 8px 0; border: 1px solid var(--input-border);
+            border-radius: 10px; background: var(--container-bg); color: var(--text-color); font-size: 1rem; box-sizing: border-box;
+        }
+
+        #adminBtn { position: fixed; bottom: 10px; right: 10px; width: auto; padding: 5px 10px; font-size: 10px; background: #95a5a6; opacity: 0.5; z-index: 1000; border: none; color: white; border-radius: 5px;}
     </style>
 </head>
 <body class="dark-theme">
 
     <div class="nav-bar">
         <div class="nav-item active" onclick="tab(this, 'home')">🏠 首頁</div>
-        <div class="nav-item" onclick="tab(this, 'math-eq')">𝝅 方程式/化簡</div>
-        <div class="nav-item" onclick="tab(this, 'math-plot')">📈 函數作圖</div>
-        <div class="nav-item" onclick="tab(this, 'date-tool')">📅 日期/跨年</div>
-        <div class="nav-item" onclick="tab(this, 'others')">🛠️ 其他工具</div>
+        <div class="nav-item" onclick="tab(this, 'math')">𝝅 數學</div>
+        <div class="nav-item" onclick="tab(this, 'dates')">📅 日期</div>
+        <div class="nav-item" onclick="tab(this, 'games')">🏀 球賽計分</div>
     </div>
 
-    <div id="home" class="container active" style="max-width: 1000px; background: transparent; box-shadow: none;">
+    <div id="home" class="container active" style="background: transparent; box-shadow: none;">
         <div class="huge-clock" id="liveClock">00:00:00</div>
-        <div class="huge-date" id="liveDate">2026年04月16日</div>
-        <button onclick="toggleTheme()" style="width: auto; margin-top: 50px; padding: 10px 30px;">切換主題顏色</button>
-    </div>
-
-    <div id="math-eq" class="container">
-        <h2>𝝅 代數式化簡</h2>
-        <input type="text" id="simpInput" placeholder="例如: (x + 2)^2 + 2x + 4">
-        <button onclick="mathSimplify()">化簡表達式</button>
-        <div id="simpRes" class="result-box">結果...</div>
-
-        <h2>🧬 聯立方程式 (二元一次)</h2>
-        <p style="font-size:0.8rem">格式: ax + by = c</p>
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
-            <input type="number" id="eq1a" placeholder="a1"> <input type="number" id="eq1b" placeholder="b1"> <input type="number" id="eq1c" placeholder="c1">
-            <input type="number" id="eq2a" placeholder="a2"> <input type="number" id="eq2b" placeholder="b2"> <input type="number" id="eq2c" placeholder="c2">
-        </div>
-        <button onclick="solveLinear()">求解聯立方程</button>
-        <div id="linearRes" class="result-box"></div>
-
-        <h2>🔢 高次方程求解 (最多三次)</h2>
-        <p style="font-size:0.8rem">格式: ax³ + bx² + cx + d = 0</p>
-        <div style="display:flex; gap:5px;">
-            <input type="number" id="polyA" placeholder="a"> <input type="number" id="polyB" placeholder="b">
-            <input type="number" id="polyC" placeholder="c"> <input type="number" id="polyD" placeholder="d" value="0">
-        </div>
-        <button onclick="solvePoly()">求實數根</button>
-        <div id="polyRes" class="result-box"></div>
-    </div>
-
-    <div id="math-plot" class="container">
-        <h2>📈 函數作圖 (y = f(x))</h2>
-        <input type="text" id="plotInput" value="x^2" placeholder="輸入函數，如: sin(x) * 5">
-        <button onclick="draw()">開始繪圖</button>
-        <canvas id="canvas"></canvas>
-    </div>
-
-    <div id="date-tool" class="container">
-        <div id="newYearBox" style="display:none; background: linear-gradient(to right, #e74c3c, #c0392b); color:white; padding:15px; border-radius:15px; margin-bottom:20px; text-align:center;">
+        <div id="liveDate" style="font-size: 1.2rem; opacity: 0.8;"></div>
+        <div id="newYearHome">
             <h3>🎊 跨年倒數</h3>
-            <div id="nyCount" style="font-family:monospace; font-size:1.5rem;"></div>
+            <div id="nyDisplay" style="font-size: 2rem; font-weight: bold; font-family: monospace;"></div>
         </div>
-
-        <h2>📅 日期差距</h2>
-        <input type="date" id="dStart">
-        <input type="date" id="dEnd">
-        <button onclick="dateDiff()">計算間隔天數</button>
-        <div id="diffRes" class="result-box"></div>
-
-        <h2>⏳ 日期推算 (加減天數)</h2>
-        <input type="date" id="baseDate">
-        <input type="number" id="offsetDays" placeholder="輸入經過天數 (負數代表往前回推)">
-        <button onclick="dateAdd()">求目標日期</button>
-        <div id="addRes" class="result-box"></div>
+        <button onclick="document.body.classList.toggle('dark-theme')" style="width: auto; margin-top: 30px; opacity: 0.6;">切換主題</button>
     </div>
 
-    <div id="others" class="container">
-        <h2>🎾 簡易計數器</h2>
-        <div style="display:flex; align-items:center; justify-content:space-around; font-size:3rem;">
-            <button onclick="count(-1)" style="width:60px">-</button>
-            <span id="cv">0</span>
-            <button onclick="count(1)" style="width:60px">+</button>
+    <div id="games" class="container">
+        <select id="sportSel" onchange="initScoreBtns()">
+            <option value="BSK">🏀 籃球模式</option>
+            <option value="GEN">🏸 一般模式 (1分)</option>
+        </select>
+
+        <div id="basketballExtras">
+            <div class="game-timer-box">
+                <div style="font-size: 0.8rem; color: #888;">GAME TIMER</div>
+                <div class="game-time" id="gameTime">12:00</div>
+                <div style="display: flex; gap: 5px; justify-content: center;">
+                    <button onclick="toggleGameTimer()" id="timerBtn" style="width: 80px; padding: 5px; font-size: 0.8rem; background: #27ae60;">START</button>
+                    <button onclick="resetGameTimer()" style="width: 80px; padding: 5px; font-size: 0.8rem; background: #c0392b;">RESET</button>
+                </div>
+            </div>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <span class="period-box" onclick="changePeriod()">PERIOD <span id="periodVal">1</span></span>
+            </div>
         </div>
-        <button onclick="document.getElementById('cv').innerText=0" style="background:#95a5a6">歸零</button>
+        
+        <div class="score-board">
+            <div>
+                <div class="team-name">HOME</div>
+                <div id="scA" class="score-val">0</div>
+                <div class="foul-box">FOULS: <span id="foulA">0</span></div>
+                <div id="btnsA" class="score-btns"></div>
+                <button class="foul-btn" onclick="addFoul('A')">犯規 +1</button>
+            </div>
+            <div style="font-size: 1.5rem; padding-top: 20px; opacity: 0.3;">VS</div>
+            <div>
+                <div class="team-name">AWAY</div>
+                <div id="scB" class="score-val">0</div>
+                <div class="foul-box">FOULS: <span id="foulB">0</span></div>
+                <div id="btnsB" class="score-btns"></div>
+                <button class="foul-btn" onclick="addFoul('B')">犯規 +1</button>
+            </div>
+        </div>
+        <button onclick="fullResetScore()" style="margin-top: 25px; background: #7f8c8d;">全場重置</button>
+    </div>
+
+    <div id="math" class="container">
+        <h2>𝝅 方程式求解</h2>
+        <input type="text" id="simpInput" placeholder="輸入算式: (x+2)^2">
+        <button onclick="doSimp()">計算/化簡</button>
+        <div id="simpRes" style="margin-top:10px; font-weight:bold;"></div>
+    </div>
+
+    <div id="dates" class="container">
+        <h2>📅 日期推算</h2>
+        <input type="date" id="baseDate">
+        <input type="number" id="daysOffset" placeholder="天數 (例: 100)">
+        <button onclick="calcDate()">求日期</button>
+        <div id="dateRes" style="margin-top:10px; font-weight:bold;"></div>
     </div>
 
     <button id="adminBtn" onclick="askAdmin()">Admin</button>
 
     <script>
-        // --- 核心邏輯：導覽與時鐘 ---
+        // 分頁控制
         function tab(el, id) {
             document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -186,106 +193,124 @@
             el.classList.add('active');
         }
 
-        function toggleTheme() {
-            document.body.classList.toggle('dark-theme');
-            document.body.classList.toggle('light-theme');
-        }
-
-        function updateTime() {
+        // 時鐘與跨年
+        function updateClock() {
             const now = new Date();
             document.getElementById('liveClock').innerText = now.toTimeString().split(' ')[0];
             document.getElementById('liveDate').innerText = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
             
-            // 跨年邏輯
             if (now.getMonth() === 11 && now.getDate() >= 25) {
-                document.getElementById('newYearBox').style.display = 'block';
+                document.getElementById('newYearHome').style.display = 'block';
                 const nextYear = new Date(now.getFullYear()+1, 0, 1);
-                const diffS = Math.floor((nextYear - now)/1000);
-                document.getElementById('nyCount').innerText = `${diffS.toLocaleString()} 秒`;
+                const s = Math.floor((nextYear - now)/1000);
+                document.getElementById('nyDisplay').innerText = s.toLocaleString() + " s";
             }
         }
-        setInterval(updateTime, 1000);
+        setInterval(updateClock, 1000);
 
-        // --- 數學運算 ---
-        function mathSimplify() {
-            const expr = document.getElementById('simpInput').value;
-            try {
-                const result = math.simplify(expr).toString();
-                document.getElementById('simpRes').innerText = "化簡結果: " + result;
-            } catch (e) { alert("輸入格式錯誤"); }
-        }
+        // --- 籃球計分系統 ---
+        let scA = 0, scB = 0, flA = 0, flB = 0, period = 1;
+        let gameTimeSec = 12 * 60;
+        let timerRunning = false;
+        let timerInterval;
 
-        function solveLinear() {
-            const a1 = +document.getElementById('eq1a').value, b1 = +document.getElementById('eq1b').value, c1 = +document.getElementById('eq1c').value;
-            const a2 = +document.getElementById('eq2a').value, b2 = +document.getElementById('eq2b').value, c2 = +document.getElementById('eq2c').value;
-            const det = a1*b2 - a2*b1;
-            if (det === 0) document.getElementById('linearRes').innerText = "無解或無限多解";
-            else {
-                const x = (c1*b2 - c2*b1)/det, y = (a1*c2 - a2*c1)/det;
-                document.getElementById('linearRes').innerText = `解: x = ${x.toFixed(2)}, y = ${y.toFixed(2)}`;
-            }
-        }
-
-        function solvePoly() {
-            const a = +document.getElementById('polyA').value, b = +document.getElementById('polyB').value,
-                  c = +document.getElementById('polyC').value, d = +document.getElementById('polyD').value;
-            // 這裡使用簡單的數值逼近或公式，為求簡潔，示範 math.js 處理
-            document.getElementById('polyRes').innerText = "求解中... (建議使用函數作圖觀察零點)";
-            // 實作上可引入立方方程判別式，此處導引使用者至繪圖功能
-        }
-
-        // --- 繪圖邏輯 ---
-        function draw() {
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
-            const expr = document.getElementById('plotInput').value;
-            const node = math.parse(expr);
-            const code = node.compile();
-
-            ctx.clearRect(0,0, canvas.width, canvas.height);
-            ctx.beginPath();
-            ctx.strokeStyle = '#3498db';
+        function initScoreBtns() {
+            const mode = document.getElementById('sportSel').value;
+            const bskExtras = document.getElementById('basketballExtras');
+            bskExtras.style.display = (mode === 'BSK') ? 'block' : 'none';
             
-            const scale = 20; // 縮放比例
-            const offsetX = canvas.width / 2;
-            const offsetY = canvas.height / 2;
+            const points = (mode === 'BSK') ? [1, 2, 3] : [1];
+            ['A', 'B'].forEach(t => {
+                const container = document.getElementById('btns' + t);
+                container.innerHTML = '';
+                points.forEach(p => {
+                    const btn = document.createElement('button');
+                    btn.className = 'score-btn-small';
+                    btn.innerText = '+' + p;
+                    btn.onclick = () => {
+                        if(t === 'A') { scA += p; document.getElementById('scA').innerText = scA; }
+                        else { scB += p; document.getElementById('scB').innerText = scB; }
+                    };
+                    container.appendChild(btn);
+                });
+            });
+        }
 
-            for (let i = -offsetX; i < offsetX; i++) {
-                const x = i / scale;
-                const y = code.evaluate({x: x});
-                const px = i + offsetX;
-                const py = offsetY - y * scale;
-                if (i === -offsetX) ctx.moveTo(px, py);
-                else ctx.lineTo(px, py);
+        function addFoul(t) {
+            if(t === 'A') { flA++; document.getElementById('foulA').innerText = flA; }
+            else { flB++; document.getElementById('foulB').innerText = flB; }
+        }
+
+        function changePeriod() {
+            period = (period % 4) + 1;
+            document.getElementById('periodVal').innerText = period;
+        }
+
+        function toggleGameTimer() {
+            const btn = document.getElementById('timerBtn');
+            if (timerRunning) {
+                clearInterval(timerInterval);
+                btn.innerText = 'START';
+                btn.style.background = '#27ae60';
+            } else {
+                timerInterval = setInterval(() => {
+                    if (gameTimeSec > 0) {
+                        gameTimeSec--;
+                        updateTimerDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                        alert("時間到！");
+                    }
+                }, 1000);
+                btn.innerText = 'STOP';
+                btn.style.background = '#e67e22';
             }
-            ctx.stroke();
-            // 畫軸
-            ctx.strokeStyle = '#999'; ctx.beginPath();
-            ctx.moveTo(0, offsetY); ctx.lineTo(canvas.width, offsetY);
-            ctx.moveTo(offsetX, 0); ctx.lineTo(offsetX, canvas.height); ctx.stroke();
+            timerRunning = !timerRunning;
         }
 
-        // --- 日期推算 ---
-        function dateDiff() {
-            const d1 = new Date(document.getElementById('dStart').value);
-            const d2 = new Date(document.getElementById('dEnd').value);
-            const diff = Math.ceil((d2 - d1)/86400000);
-            document.getElementById('diffRes').innerText = `差距: ${diff} 天`;
+        function updateTimerDisplay() {
+            const m = Math.floor(gameTimeSec / 60);
+            const s = gameTimeSec % 60;
+            document.getElementById('gameTime').innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
         }
 
-        function dateAdd() {
-            const base = new Date(document.getElementById('baseDate').value);
-            const days = parseInt(document.getElementById('offsetDays').value);
-            base.setDate(base.getDate() + days);
-            document.getElementById('addRes').innerText = `結果日期: ${base.toLocaleDateString()}`;
+        function resetGameTimer() {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            gameTimeSec = 12 * 60;
+            updateTimerDisplay();
+            document.getElementById('timerBtn').innerText = 'START';
+            document.getElementById('timerBtn').style.background = '#27ae60';
         }
 
-        function count(v) { document.getElementById('cv').innerText = +document.getElementById('cv').innerText + v; }
-        
+        function fullResetScore() {
+            scA = 0; scB = 0; flA = 0; flB = 0; period = 1;
+            document.getElementById('scA').innerText = 0;
+            document.getElementById('scB').innerText = 0;
+            document.getElementById('foulA').innerText = 0;
+            document.getElementById('foulB').innerText = 0;
+            document.getElementById('periodVal').innerText = 1;
+            resetGameTimer();
+        }
+
+        // 數學/日期
+        function doSimp() {
+            try { document.getElementById('simpRes').innerText = math.simplify(document.getElementById('simpInput').value).toString(); }
+            catch(e) { document.getElementById('simpRes').innerText = "錯誤"; }
+        }
+        function calcDate() {
+            const d = new Date(document.getElementById('baseDate').value);
+            const offset = parseInt(document.getElementById('daysOffset').value);
+            d.setDate(d.getDate() + offset);
+            document.getElementById('dateRes').innerText = d.toLocaleDateString();
+        }
+
+        function askAdmin() { if(prompt("Pass:") === "27322935") alert("Admin Mode On"); }
+
         // 初始化
-        updateTime();
+        initScoreBtns();
+        updateClock();
         document.getElementById('baseDate').valueAsDate = new Date();
-        document.getElementById('dStart').valueAsDate = new Date();
     </script>
 </body>
 </html>
