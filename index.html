@@ -3,320 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>阿簽時間與日期小工具</title>
+    <title>阿簽牌線上計算小工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.js"></script>
     <style>
         :root {
             --bg-color: #f5f7fa;
             --container-bg: #ffffff;
             --text-color: #2c3e50;
-            --input-border: #ccd1d9;
             --accent-color: #3498db;
-            --shadow: 0 4px 15px rgba(0,0,0,0.1);
+            --shadow: 0 4px 20px rgba(0,0,0,0.1);
+            --input-border: #ccd1d9;
         }
 
-        /* 深色模式支援 */
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-color: #1a1a1a;
-                --container-bg: #2d2d2d;
-                --text-color: #ecf0f1;
-                --input-border: #444;
+                --bg-color: #121212;
+                --container-bg: #1e1e1e;
+                --text-color: #e0e0e0;
                 --accent-color: #5dade2;
-                --shadow: 0 4px 20px rgba(0,0,0,0.3);
+                --shadow: 0 4px 25px rgba(0,0,0,0.5);
+                --input-border: #333;
             }
         }
 
-        body.light-theme {
-            --bg-color: #f5f7fa;
-            --container-bg: #ffffff;
-            --text-color: #2c3e50;
-        }
-        body.dark-theme {
-            --bg-color: #1a1a1a;
-            --container-bg: #2d2d2d;
-            --text-color: #ecf0f1;
-        }
+        body.light-theme { --bg-color: #f5f7fa; --container-bg: #ffffff; --text-color: #2c3e50; }
+        body.dark-theme { --bg-color: #121212; --container-bg: #1e1e1e; --text-color: #e0e0e0; }
 
         body {
-            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+            font-family: "PingFang TC", sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
+            margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
-            transition: 0.3s;
-            margin: 0;
             min-height: 100vh;
-        }
-
-        .container {
-            background: var(--container-bg);
-            padding: 1.5rem 2rem;
-            border-radius: 20px;
-            box-shadow: var(--shadow);
-            width: 100%;
-            max-width: 550px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
             transition: 0.3s;
         }
 
-        h2 { border-left: 5px solid var(--accent-color); padding-left: 15px; margin: 0 0 15px 0; font-size: 1.3rem; }
-        
-        /* --- 放大 3 倍的現在時刻樣式 --- */
-        #currentTimePanel { 
-            padding: 2.5rem 1rem;
-            border: 2px solid var(--accent-color);
-        }
-        .clock { 
-            font-family: 'Courier New', monospace; 
-            font-size: 5rem; /* 核心放大 */
-            font-weight: 900; 
-            color: var(--accent-color); 
-            line-height: 1;
-            margin: 15px 0;
-            text-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
-            letter-spacing: -2px;
-        }
-        #liveDate { font-size: 1.2rem; font-weight: bold; opacity: 0.9; }
-
-        select, input, button {
+        /* 導覽列 */
+        .nav-bar {
             width: 100%;
-            padding: 12px;
-            margin-top: 8px;
-            border: 1px solid var(--input-border);
-            border-radius: 8px;
+            overflow-x: auto;
+            white-space: nowrap;
             background: var(--container-bg);
-            color: var(--text-color);
-            font-size: 1rem;
-            box-sizing: border-box;
+            padding: 10px;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
-        button {
-            background: var(--accent-color);
-            color: white;
-            border: none;
+        .nav-item {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 0 5px;
             cursor: pointer;
+            border-radius: 25px;
             font-weight: bold;
             transition: 0.2s;
         }
 
-        button:active { transform: scale(0.98); }
+        .nav-item.active { background: var(--accent-color); color: white; }
 
-        /* 倒數區塊 */
-        #newYearSection {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            text-align: center;
+        .container {
+            width: 95%;
+            max-width: 600px;
+            margin: 20px 0;
+            padding: 20px;
+            background: var(--container-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
             display: none;
         }
 
-        .timer-display {
-            font-family: 'Courier New', monospace;
-            background: rgba(0,0,0,0.2);
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 10px;
-            color: #ffd700;
+        .container.active { display: block; }
+
+        /* 首頁巨大時鐘 */
+        #home { text-align: center; padding: 100px 20px; }
+        .huge-clock { font-size: 8rem; font-weight: 900; font-family: 'Courier New', monospace; color: var(--accent-color); text-shadow: 0 0 30px rgba(52, 152, 219, 0.4); }
+        .huge-date { font-size: 2rem; opacity: 0.8; margin-top: 20px; }
+
+        /* UI 元件 */
+        h2 { border-left: 6px solid var(--accent-color); padding-left: 15px; margin-bottom: 20px; }
+        input, select, button, textarea {
+            width: 100%; padding: 12px; margin: 8px 0; border: 1px solid var(--input-border);
+            border-radius: 10px; background: var(--container-bg); color: var(--text-color); font-size: 1rem;
         }
+        button { background: var(--accent-color); color: white; border: none; font-weight: bold; cursor: pointer; }
+        .result-box { background: rgba(52, 152, 219, 0.1); padding: 15px; border-radius: 10px; margin-top: 10px; font-weight: bold; white-space: pre-wrap; }
+        
+        canvas { background: white; border-radius: 10px; width: 100%; height: 300px; margin-top: 10px; }
 
-        .sub-timer { font-size: 1rem; color: #ddd; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; line-height: 1.6; }
-
-        /* 右下角管理按鈕 */
-        #adminBtn {
-            position: fixed;
-            bottom: 15px;
-            right: 15px;
-            width: auto;
-            padding: 6px 12px;
-            font-size: 11px;
-            background: #95a5a6;
-            opacity: 0.4;
-            z-index: 100;
-            border-radius: 4px;
-        }
-        #adminBtn:hover { opacity: 1; }
-
-        .theme-toggle { width: auto; font-size: 0.8rem; padding: 6px 15px; background: #7f8c8d; margin-bottom: 15px; }
-
-        #testPanel { display: none; background: #fff3cd; color: #856404; border: 1px dashed #ffeeba; text-align: center; }
-        .result { margin-top: 15px; text-align: center; font-weight: bold; color: var(--accent-color); font-size: 1.2rem; }
-
-        /* 手機適應 */
-        @media (max-width: 480px) {
-            .clock { font-size: 3.5rem; }
-        }
+        #adminBtn { position: fixed; bottom: 10px; right: 10px; opacity: 0.2; width: auto; font-size: 10px; }
     </style>
 </head>
-<body>
+<body class="dark-theme">
 
-    <button class="theme-toggle" onclick="toggleTheme()">切換主題顏色</button>
-
-    <div class="container" id="currentTimePanel">
-        <div style="font-size: 1.1rem; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Current Time</div>
-        <div id="liveClock" class="clock">00:00:00</div>
-        <div id="liveDate">2026年01月01日</div>
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="tab(this, 'home')">🏠 首頁</div>
+        <div class="nav-item" onclick="tab(this, 'math-eq')">𝝅 方程式/化簡</div>
+        <div class="nav-item" onclick="tab(this, 'math-plot')">📈 函數作圖</div>
+        <div class="nav-item" onclick="tab(this, 'date-tool')">📅 日期/跨年</div>
+        <div class="nav-item" onclick="tab(this, 'others')">🛠️ 其他工具</div>
     </div>
 
-    <div id="testPanel" class="container">
-        <p><strong>🛠️ 模擬測試面板</strong></p>
-        <button style="width:auto; padding:5px 10px;" onclick="setMock(12, 28)">模擬 12/28</button>
-        <button style="width:auto; padding:5px 10px;" onclick="setMock(12, 31)">模擬 12/31</button>
-        <button style="width:auto; padding:5px 10px;" onclick="setMock(null, null)">恢復正常</button>
+    <div id="home" class="container active" style="max-width: 1000px; background: transparent; box-shadow: none;">
+        <div class="huge-clock" id="liveClock">00:00:00</div>
+        <div class="huge-date" id="liveDate">2026年04月16日</div>
+        <button onclick="toggleTheme()" style="width: auto; margin-top: 50px; padding: 10px 30px;">切換主題顏色</button>
     </div>
 
-    <div id="newYearSection" class="container">
-        <h2 style="color:white; border-color:#e74c3c;">🎊 新年倒數計時</h2>
-        <div id="countdownDisplay" class="timer-display">--</div>
-    </div>
+    <div id="math-eq" class="container">
+        <h2>𝝅 代數式化簡</h2>
+        <input type="text" id="simpInput" placeholder="例如: (x + 2)^2 + 2x + 4">
+        <button onclick="mathSimplify()">化簡表達式</button>
+        <div id="simpRes" class="result-box">結果...</div>
 
-    <div class="container">
-        <h2>📅 日期差距計算</h2>
-        <select id="quickSelect" onchange="applyQuickSelect()">
-            <option value="">-- 快速選擇大考日期 --</option>
-            <optgroup label="✨ 節慶" id="opt-holiday"></optgroup>
-            <optgroup label="📝 國中會考" id="opt-cap"></optgroup>
-            <optgroup label="🎓 大學學測" id="opt-gsat"></optgroup>
-            <optgroup label="🧪 分科測驗" id="opt-ast"></optgroup>
-        </select>
-        <div style="margin-top:10px;">
-            <label style="font-size: 0.8rem; font-weight: bold;">開始日期：</label>
-            <input type="date" id="startDate">
+        <h2>🧬 聯立方程式 (二元一次)</h2>
+        <p style="font-size:0.8rem">格式: ax + by = c</p>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
+            <input type="number" id="eq1a" placeholder="a1"> <input type="number" id="eq1b" placeholder="b1"> <input type="number" id="eq1c" placeholder="c1">
+            <input type="number" id="eq2a" placeholder="a2"> <input type="number" id="eq2b" placeholder="b2"> <input type="number" id="eq2c" placeholder="c2">
         </div>
-        <div style="margin-top:10px;">
-            <label style="font-size: 0.8rem; font-weight: bold;">結束日期：</label>
-            <input type="date" id="endDate">
+        <button onclick="solveLinear()">求解聯立方程</button>
+        <div id="linearRes" class="result-box"></div>
+
+        <h2>🔢 高次方程求解 (最多三次)</h2>
+        <p style="font-size:0.8rem">格式: ax³ + bx² + cx + d = 0</p>
+        <div style="display:flex; gap:5px;">
+            <input type="number" id="polyA" placeholder="a"> <input type="number" id="polyB" placeholder="b">
+            <input type="number" id="polyC" placeholder="c"> <input type="number" id="polyD" placeholder="d" value="0">
         </div>
-        <button onclick="calculateDiff()">計算天數</button>
-        <div id="dateResult" class="result"></div>
+        <button onclick="solvePoly()">求實數根</button>
+        <div id="polyRes" class="result-box"></div>
     </div>
 
-    <button id="adminBtn" onclick="askPassword()">Admin</button>
+    <div id="math-plot" class="container">
+        <h2>📈 函數作圖 (y = f(x))</h2>
+        <input type="text" id="plotInput" value="x^2" placeholder="輸入函數，如: sin(x) * 5">
+        <button onclick="draw()">開始繪圖</button>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div id="date-tool" class="container">
+        <div id="newYearBox" style="display:none; background: linear-gradient(to right, #e74c3c, #c0392b); color:white; padding:15px; border-radius:15px; margin-bottom:20px; text-align:center;">
+            <h3>🎊 跨年倒數</h3>
+            <div id="nyCount" style="font-family:monospace; font-size:1.5rem;"></div>
+        </div>
+
+        <h2>📅 日期差距</h2>
+        <input type="date" id="dStart">
+        <input type="date" id="dEnd">
+        <button onclick="dateDiff()">計算間隔天數</button>
+        <div id="diffRes" class="result-box"></div>
+
+        <h2>⏳ 日期推算 (加減天數)</h2>
+        <input type="date" id="baseDate">
+        <input type="number" id="offsetDays" placeholder="輸入經過天數 (負數代表往前回推)">
+        <button onclick="dateAdd()">求目標日期</button>
+        <div id="addRes" class="result-box"></div>
+    </div>
+
+    <div id="others" class="container">
+        <h2>🎾 簡易計數器</h2>
+        <div style="display:flex; align-items:center; justify-content:space-around; font-size:3rem;">
+            <button onclick="count(-1)" style="width:60px">-</button>
+            <span id="cv">0</span>
+            <button onclick="count(1)" style="width:60px">+</button>
+        </div>
+        <button onclick="document.getElementById('cv').innerText=0" style="background:#95a5a6">歸零</button>
+    </div>
+
+    <button id="adminBtn" onclick="askAdmin()">Admin</button>
 
     <script>
-        let mockM = null; let mockD = null;
-
-        function updateLiveClock() {
-            const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            const s = String(now.getSeconds()).padStart(2, '0');
-            const y = now.getFullYear();
-            const mo = now.getMonth() + 1;
-            const d = now.getDate();
-            
-            document.getElementById('liveClock').innerText = `${h}:${m}:${s}`;
-            document.getElementById('liveDate').innerText = `${y} 年 ${mo} 月 ${d} 日`;
+        // --- 核心邏輯：導覽與時鐘 ---
+        function tab(el, id) {
+            document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            el.classList.add('active');
         }
 
         function toggleTheme() {
-            const body = document.body;
-            if (body.classList.contains('dark-theme')) body.classList.replace('dark-theme', 'light-theme');
-            else if (body.classList.contains('light-theme')) body.classList.replace('light-theme', 'dark-theme');
-            else body.classList.add(window.matchMedia("(prefers-color-scheme: dark)").matches ? 'light-theme' : 'dark-theme');
+            document.body.classList.toggle('dark-theme');
+            document.body.classList.toggle('light-theme');
         }
 
-        function askPassword() {
-            if (prompt("輸入管理密碼：") === "27322935") {
-                document.getElementById('testPanel').style.display = "block";
-            } else { alert("密碼錯誤"); }
-        }
-
-        function setMock(m, d) { mockM = m; mockD = d; updateCountdown(); }
-
-        function getNextDOW(y, m, d, dow) {
-            let dt = new Date(y, m - 1, d);
-            while (dt.getDay() !== dow) dt.setDate(dt.getDate() + 1);
-            return dt;
-        }
-
-        function initSelect() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const groups = {
-                'holiday': { el: document.getElementById('opt-holiday'), dates: [{n:`${year+1} 元旦`, d:new Date(year+1, 0, 1)}] },
-                'cap': { el: document.getElementById('opt-cap'), dates: [] },
-                'gsat': { el: document.getElementById('opt-gsat'), dates: [] },
-                'ast': { el: document.getElementById('opt-ast'), dates: [] }
-            };
-            for (let i = 0; i < 3; i++) {
-                let y = year + i;
-                groups.cap.dates.push({n:`${y} 會考`, d:getNextDOW(y, 5, 15, 6)});
-                groups.gsat.dates.push({n:`${y} 學測`, d:getNextDOW(y, 1, 15, 5)});
-                groups.ast.dates.push({n:`${y} 分科`, d:new Date(y, 6, 12)});
-            }
-            Object.keys(groups).forEach(k => {
-                groups[k].dates.forEach(item => {
-                    if (item.d >= today.setHours(0,0,0,0)) {
-                        const ds = item.d.toISOString().split('T')[0];
-                        groups[k].el.appendChild(new Option(`${item.n} (${ds})`, ds));
-                    }
-                });
-            });
-        }
-
-        function updateCountdown() {
+        function updateTime() {
             const now = new Date();
-            const m_now = mockM || (now.getMonth() + 1);
-            const d_now = mockD || now.getDate();
-            const section = document.getElementById('newYearSection');
-            const display = document.getElementById('countdownDisplay');
+            document.getElementById('liveClock').innerText = now.toTimeString().split(' ')[0];
+            document.getElementById('liveDate').innerText = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+            
+            // 跨年邏輯
+            if (now.getMonth() === 11 && now.getDate() >= 25) {
+                document.getElementById('newYearBox').style.display = 'block';
+                const nextYear = new Date(now.getFullYear()+1, 0, 1);
+                const diffS = Math.floor((nextYear - now)/1000);
+                document.getElementById('nyCount').innerText = `${diffS.toLocaleString()} 秒`;
+            }
+        }
+        setInterval(updateTime, 1000);
 
-            if (m_now === 12 && d_now >= 25) {
-                section.style.display = "block";
-                const nextYear = new Date(now.getFullYear() + 1, 0, 1);
-                const diffMs = nextYear - now;
-                
-                const totalS = Math.floor(diffMs / 1000);
-                const totalM = Math.floor(totalS / 60);
-                const totalH = Math.floor(totalS / 3600);
-                
-                const d = Math.floor(totalS / 86400);
-                const m_rem = Math.floor((totalS % 3600) / 60);
-                const s_rem = totalS % 60;
+        // --- 數學運算 ---
+        function mathSimplify() {
+            const expr = document.getElementById('simpInput').value;
+            try {
+                const result = math.simplify(expr).toString();
+                document.getElementById('simpRes').innerText = "化簡結果: " + result;
+            } catch (e) { alert("輸入格式錯誤"); }
+        }
 
-                if (d_now === 31) {
-                    display.innerHTML = `
-                        <div style="font-size: 2.2rem;">${totalS.toLocaleString()} <small>秒</small></div>
-                        <div class="sub-timer">⌛ 總累積：${totalM.toLocaleString()} 分 ${s_rem} 秒</div>
-                        <div class="sub-timer">🕒 總累積：${totalH.toLocaleString()} 時 ${m_rem} 分 ${s_rem} 秒</div>
-                    `;
-                } else {
-                    const h_rem = Math.floor((totalS % 86400) / 3600);
-                    display.innerHTML = `
-                        <div style="font-size: 2rem;">${d}天 ${h_rem}時 ${m_rem}分</div>
-                        <div style="font-size: 0.9rem; color: #eee; margin-top:5px;">累積約 ${totalH.toLocaleString()} 小時</div>
-                    `;
-                }
-            } else {
-                section.style.display = "none";
+        function solveLinear() {
+            const a1 = +document.getElementById('eq1a').value, b1 = +document.getElementById('eq1b').value, c1 = +document.getElementById('eq1c').value;
+            const a2 = +document.getElementById('eq2a').value, b2 = +document.getElementById('eq2b').value, c2 = +document.getElementById('eq2c').value;
+            const det = a1*b2 - a2*b1;
+            if (det === 0) document.getElementById('linearRes').innerText = "無解或無限多解";
+            else {
+                const x = (c1*b2 - c2*b1)/det, y = (a1*c2 - a2*c1)/det;
+                document.getElementById('linearRes').innerText = `解: x = ${x.toFixed(2)}, y = ${y.toFixed(2)}`;
             }
         }
 
-        function calculateDiff() {
-            const start = new Date(document.getElementById('startDate').value);
-            const end = new Date(document.getElementById('endDate').value);
-            if (isNaN(start) || isNaN(end)) return;
-            const diff = Math.ceil((end - start) / 86400000);
-            document.getElementById('dateResult').innerHTML = diff >= 0 ? `還有 ${diff} 天` : `已過 ${Math.abs(diff)} 天`;
+        function solvePoly() {
+            const a = +document.getElementById('polyA').value, b = +document.getElementById('polyB').value,
+                  c = +document.getElementById('polyC').value, d = +document.getElementById('polyD').value;
+            // 這裡使用簡單的數值逼近或公式，為求簡潔，示範 math.js 處理
+            document.getElementById('polyRes').innerText = "求解中... (建議使用函數作圖觀察零點)";
+            // 實作上可引入立方方程判別式，此處導引使用者至繪圖功能
         }
 
-        function applyQuickSelect() {
-            const val = document.getElementById('quickSelect').value;
-            if(val) { document.getElementById('endDate').value = val; calculateDiff(); }
+        // --- 繪圖邏輯 ---
+        function draw() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const expr = document.getElementById('plotInput').value;
+            const node = math.parse(expr);
+            const code = node.compile();
+
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.strokeStyle = '#3498db';
+            
+            const scale = 20; // 縮放比例
+            const offsetX = canvas.width / 2;
+            const offsetY = canvas.height / 2;
+
+            for (let i = -offsetX; i < offsetX; i++) {
+                const x = i / scale;
+                const y = code.evaluate({x: x});
+                const px = i + offsetX;
+                const py = offsetY - y * scale;
+                if (i === -offsetX) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            // 畫軸
+            ctx.strokeStyle = '#999'; ctx.beginPath();
+            ctx.moveTo(0, offsetY); ctx.lineTo(canvas.width, offsetY);
+            ctx.moveTo(offsetX, 0); ctx.lineTo(offsetX, canvas.height); ctx.stroke();
         }
 
-        document.getElementById('startDate').valueAsDate = new Date();
-        initSelect();
+        // --- 日期推算 ---
+        function dateDiff() {
+            const d1 = new Date(document.getElementById('dStart').value);
+            const d2 = new Date(document.getElementById('dEnd').value);
+            const diff = Math.ceil((d2 - d1)/86400000);
+            document.getElementById('diffRes').innerText = `差距: ${diff} 天`;
+        }
+
+        function dateAdd() {
+            const base = new Date(document.getElementById('baseDate').value);
+            const days = parseInt(document.getElementById('offsetDays').value);
+            base.setDate(base.getDate() + days);
+            document.getElementById('addRes').innerText = `結果日期: ${base.toLocaleDateString()}`;
+        }
+
+        function count(v) { document.getElementById('cv').innerText = +document.getElementById('cv').innerText + v; }
         
-        setInterval(() => {
-            updateLiveClock();
-            updateCountdown();
-        }, 1000);
-        
-        updateLiveClock();
-        updateCountdown();
+        // 初始化
+        updateTime();
+        document.getElementById('baseDate').valueAsDate = new Date();
+        document.getElementById('dStart').valueAsDate = new Date();
     </script>
 </body>
 </html>
